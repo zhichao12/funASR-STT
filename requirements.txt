@@ -1,0 +1,6 @@
+funasr
+modelscope
+fastapi
+uvicorn[standard]
+python-multipart
+soundfile

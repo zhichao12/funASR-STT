@@ -1,0 +1,16 @@
+services:
+  funasr-stt:
+    build: .
+    container_name: funasr-stt
+    restart: unless-stopped
+    ports:
+      - "${PORT:-10095}:10095"
+    environment:
+      FUNASR_MODEL: ${FUNASR_MODEL:-paraformer-zh}
+      FUNASR_VAD_MODEL: ${FUNASR_VAD_MODEL:-fsmn-vad}
+      FUNASR_PUNC_MODEL: ${FUNASR_PUNC_MODEL:-ct-punc}
+    volumes:
+      - funasr-model-cache:/root/.cache
+
+volumes:
+  funasr-model-cache:
