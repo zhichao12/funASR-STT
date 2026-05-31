@@ -53,3 +53,51 @@ autoProxy=true
 dnsTunneling=true
 firewall=true
 ```
+
+## Windows 局域网排查记录
+
+ESP32 项目里遇到过一次典型问题：
+
+- Windows 主机本机访问 `http://127.0.0.1:10095/health` 正常。
+- 通过电脑局域网 IP 访问 `http://<电脑局域网IP>:10095/health` 超时。
+- ESP32 日志显示 `Local STT failed: err=ESP_ERR_HTTP_CONNECT`。
+
+这说明 FunASR 容器本身是健康的，但局域网到 Docker 暴露端口的路径被防火墙、Docker 网络、路由隔离或跨网段访问挡住了。排查顺序：
+
+1. 确认 Docker 端口发布正常：
+
+```powershell
+docker ps
+docker port funasr-stt
+```
+
+期望看到：
+
+```text
+10095/tcp -> 0.0.0.0:10095
+```
+
+2. 在 Windows 主机上分别测试本机地址和局域网地址：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:10095/health
+Invoke-RestMethod http://<电脑局域网IP>:10095/health
+```
+
+3. 如果本机地址正常、局域网地址超时，优先检查 Windows 防火墙是否允许入站 TCP `10095`，以及当前网络配置是否是“专用网络”。
+
+4. 如果 ESP32 和电脑不在同一网段，例如 ESP32 是 `192.168.2.x`、电脑是 `192.168.1.x`，需要确认路由器允许 Wi-Fi 和有线 LAN 互访。访客 Wi-Fi 或 AP 隔离经常会拦截这种访问。
+
+当时测试用的临时方案：
+
+```powershell
+python funasr_proxy_10096.py
+```
+
+这个代理监听 `0.0.0.0:10096`，并转发到 `http://127.0.0.1:10095`。然后把 ESP32 固件配置改成：
+
+```c
+#define APP_AI_STT_BASE_URL "http://<电脑局域网IP>:10096"
+```
+
+`10096` 代理只是临时运行时辅助进程。电脑重启后需要重新启动；长期使用更建议修好 Docker 局域网端口、防火墙、路由隔离，或者部署稳定的反向代理/内网穿透。
