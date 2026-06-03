@@ -35,6 +35,51 @@ the ESP32 before flashing firmware:
 http://<host-lan-ip>:10095/health
 ```
 
+## ESP32 Quick Checklist
+
+1. Start the service:
+
+```powershell
+.\run.ps1
+```
+
+2. Confirm the service is healthy on the host:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:10095/health
+```
+
+3. Find the host LAN IP, for example `192.168.1.2`, and test from a phone or
+   another device on the same network as the ESP32:
+
+```text
+http://192.168.1.2:10095/health
+```
+
+4. If the LAN test works, configure the firmware with:
+
+```c
+#define APP_AI_STT_BASE_URL "http://192.168.1.2:10095"
+```
+
+5. If localhost works but LAN `10095` does not, start the Windows helper proxy:
+
+```powershell
+python funasr_proxy_10096.py
+```
+
+Then test:
+
+```text
+http://192.168.1.2:10096/health
+```
+
+and configure the firmware with:
+
+```c
+#define APP_AI_STT_BASE_URL "http://192.168.1.2:10096"
+```
+
 ## API
 
 - `GET /health`
@@ -124,6 +169,17 @@ WAV statistics, for example duration, sample rate, peak, and RMS. This is useful
 when wake-word detection fails: if `text` is empty and the RMS/peak are very
 low, the issue is likely microphone gain or captured audio level rather than
 FunASR reachability.
+
+Example proxy log:
+
+```text
+192.168.1.4:62921 ASR text:  | wav 2.00s sr=16000 ch=1 peak=115 rms=17
+```
+
+This means the ESP32 reached FunASR, but the uploaded audio was almost silent.
+In that case, check the board microphone path, firmware gain, wake recording
+length, and speaking distance. If the proxy does not log ESP32 requests at all,
+debug networking first.
 
 This is only a runtime helper. For a stable setup, prefer fixing Docker LAN
 publishing/firewall/routing or deploying the service behind a persistent reverse
