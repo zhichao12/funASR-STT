@@ -110,12 +110,20 @@ Temporary workaround used during testing:
 python funasr_proxy_10096.py
 ```
 
-The proxy listens on `0.0.0.0:10096` and forwards requests to
-`http://127.0.0.1:10095`. Then set the ESP32 firmware to:
+The proxy listens on `0.0.0.0:10096` and forwards TCP traffic to
+`127.0.0.1:10095`. It is intentionally a simple TCP pass-through so larger
+ESP32 audio uploads are not buffered or re-emitted by a second HTTP stack.
+Then set the ESP32 firmware to:
 
 ```c
 #define APP_AI_STT_BASE_URL "http://<host-lan-ip>:10096"
 ```
+
+For `/asr_base64` calls, the proxy also logs the returned ASR text and basic
+WAV statistics, for example duration, sample rate, peak, and RMS. This is useful
+when wake-word detection fails: if `text` is empty and the RMS/peak are very
+low, the issue is likely microphone gain or captured audio level rather than
+FunASR reachability.
 
 This is only a runtime helper. For a stable setup, prefer fixing Docker LAN
 publishing/firewall/routing or deploying the service behind a persistent reverse
